@@ -1,0 +1,8 @@
+<a href="/">seattle</a>
+
+<a href="https://post.craigslist.org/c/sea">post</a>
+
+<a href="https://accounts.craigslist.org/login/home">account</a>
+
+<a href="#" class="favlink"><span class="icon icon-star fav" 
+
