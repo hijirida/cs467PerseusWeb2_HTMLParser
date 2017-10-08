@@ -40,7 +40,7 @@ function parsehtml(textin, res) {
 // ***********************************
 
 app.get ('/', function (req, res) {
-  var htmlin = "index.html";
+  var htmlin = "submiturl.html";
   // fs.readFile Asynch reads file
   console.log("starting to read");
  
