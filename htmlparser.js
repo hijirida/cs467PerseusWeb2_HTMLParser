@@ -39,6 +39,9 @@ function parsehtml(textin, res) {
 // ******** ROUTES *******************
 // ***********************************
 
+// ----------------------------------
+// user interface to test parser
+// ----------------------------------
 app.get ('/', function (req, res) {
   var htmlin = "submiturl.html";
   // fs.readFile Asynch reads file
@@ -65,11 +68,12 @@ app.post ('/url', function (req, res) {
   var urlstring = req.body.urlstring;
   var results = {}; // don't use new Array() to initialize, easier convert to json
   
+  // get protocal, hostname, port
+  console.log(req.headers)
+
   request (
-    {
-      method: 'GET',
-      uri: urlstring
-    }, 
+    { method: 'GET',
+      uri: urlstring }, 
     function (err, response, body) {
       if (err) return console.error(err);
       console.log(body);
@@ -82,11 +86,20 @@ app.post ('/url', function (req, res) {
       });
       //console.log(results.toString());
       
+      // check if empty
+      // TODO: test with empty HTML
+      //
+      // cleanup url
+      /*
+      var x
+      for (x in results) {
+	// check for local url substring
+        if results[x].charAt(0) == "/"
+          results[x] = results[x]
+      }
+      */ 
       var jsonArray = JSON.parse(JSON.stringify(results))
       console.log(jsonArray)
-      //res.type('text/plain');
-      //res.send(results.toString());
-      //res.send (results);
       res.send(jsonArray);
   });
 });
