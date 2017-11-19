@@ -21,6 +21,16 @@ var request = require('request');
 var jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
+// Phantom - to use nodejs with phantomjs
+// https://ourcodeworld.com/articles/read/379/how-to-use-phantomjs-with-node-js
+var phantom = require ("phantom")
+
+// testing another phantomjs bridge called node-phantom
+//https://github.com/alexscheelmeyer/node-phantom
+var nodePhantom = require ("node-phantom");
+
+// testing phantomjs to nodejs bridge called horseman
+var Horseman = require('node-horseman');
 
 
 
@@ -75,6 +85,11 @@ function urlData(url){ // From: http://coursesweb.net/javascript/
   return re;
 }
 
+
+
+
+
+
 // ***********************************
 // ******** ROUTES *******************
 // ***********************************
@@ -101,8 +116,123 @@ app.get ('/', function (req, res) {
   });
 });
 
+
 // -----------------------------------
 // primary post URL route
+// 2017-11-18 URL route using horseman to access phantomjs
+// -----------------------------------
+app.post ('/url-horseman', function (req, res) {
+  var horseman = new Horseman({timeout: 10000});
+  var urlstring = req.body.urlstring;
+  var results = {};
+  
+  // get protocol, hostname, port
+  console.log("######## req.headers ########");
+  console.log(req.headers);
+  console.log ("####### req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+
+  //var links = [];
+  
+  horseman
+    .log("starting horseman")
+    .open(urlstring)
+    .log("### URL ### ").url().log()
+    .log("### title ### ").title().log()
+    //.log("### PLAIN TEXT ### ").plainText().log()
+    //.html().log() // log prints the last call
+    .log("### anchor elements ## ").count('a').log() // outputs the number of anchor tags
+    .evaluate( function(){
+      // This code is executed inside the browser.
+      // It's sandboxed from Node, and has no access to anything
+      // unless you pass it in. Have access to jQuery, via $, automatically.
+      
+      var current_title = $(document).attr('title');
+      var current_url = document.URL;
+      
+      if ( !current_title ) {
+        var results = "no_title";
+        return results;
+      }
+
+      //var links = [];
+      var results = {};
+
+      $('a').each( function(index) {
+        //DO NOT USE!: var link = $(this).attr('href');
+        var link = this.getAttribute('href');
+        //links.push(link);
+        if ((current_url) && (link)) {
+          if (link.charAt(0) == "/") {
+            link = current_url.concat(link.substring(1));
+          }
+        }
+        results[index] = link;
+      });
+      
+      
+      var cleanUrlList = {};	
+      var z = 0;
+      var newURL;
+      for (var x in results) {
+        if ((results[x]) && (results[x].substring(0, 4) == 'http'))
+        {
+          cleanUrlList[z] = results[x];
+          z++;
+        }
+      }
+      return cleanUrlList; //results;  
+    })
+    .then(
+      function(response) {
+
+        console.log("--- success step ---");
+        var count = Object.keys(response).length
+
+        if (response) {
+          console.log(response);
+          console.log("### count ### " + count);
+           
+          if (response == "no_title") {
+            res.status(404).send("404 Not Found");
+            
+          } else if (count == 0) {
+            res.status(204).send("204 No urls found in html");
+          
+          } else {
+            res.send(response);
+          }
+
+        } else {
+          console.log("empty response");
+          res.status(404).send("404 Not Found");
+        }
+      },
+      function(error) {
+        console.log ("--- error handling ---");
+        console.log(error);
+        res.status(404).send("404 Not Found");
+      }
+    )
+    .finally(function(){
+		  horseman.close();
+	  });    
+});
+
+
+
+
+
+
+
+// -----------------------------------
+// DEPRECATED!!!: post URL route using cheerio
 // -----------------------------------
 app.post ('/url', function (req, res) {
   var urlstring = req.body.urlstring;
@@ -120,104 +250,6 @@ app.post ('/url', function (req, res) {
     return;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-  JSDOM.fromURL('https://google.com', {
-    runScripts: 'dangerously'
-  }).then(dom => {
-    console.log ("#### using .fromURL method ####");
-    console.log(dom.serialize());
-    console.log (dom.window.document.querySelectorAll("a"));
-    console.log ("grab href");
-    //console.log (dom.window.document.getElementByID("a").href);
-    console.log ("grab text");
-    //console.log (dom.window.document.querySelector("p").textContent);
-  });
-  //console.log (dom.window.document.querySelector("p").textContent);
-*/
-/****** 
-  // testing jsdom method of parsing html
-  const dom = new JSDOM(``, {
-    //url: urlstring,
-    url: "https://google.com",
-    runScripts: "dangerously",
-    contentType: "text/html",
-    includeNodeLocations: true   
-  });
-
-  // if the urlstring is not valid, JSDOM will throw error "Invalid URL"
-  //
-  console.log ("##### here is the dom #####");
-  console.log (dom);
-  console.log (dom.serialize());
-  console.log (dom.window.document);
-
-  // test if there is a dom returned
-  console.log ("#### Test dom ####");
-  const testdom = new JSDOM(`<!DOCTYPE html><p>Hello world</p>`);
-  console.log (testdom.window.document);
-  console.log (testdom.serialize());
-  console.log (testdom.window.document.querySelector("p").textContent);
-  console.log (dom.window.document.querySelector("p").textContent);
-
-
-  //console.log (dom.serialize());
-  // get the url from document
-  console.log ("#### here is the URI #####");
-  console.log (dom.window.document.uri);
-  console.log (JSON.stringify(dom.window.document.querySelectorAll("a")));
-  var hrefArray = JSON.stringify(dom.window.document.querySelectorAll("a"));
-  for (var i in hrefArray) {
-    console.log(hrefArray[i]);
-  }
-  // get the componenets 
-  console.log (dom.window.document.body);
-  const document = dom.window.document;
-  const bodyEl = document.body;
-  const aEl = document.querySelector("a");
-  console.log (aEl);
-  // # of links
-  var numLinks = dom.window.document.links.length;
-  console.log ("numLinks = "+numLinks);
-  console.log ("dom.window.document.links = " + dom.window.document.links[0]);
-*/
-/*
-  jsdom.env ({
-    url: urlstring, 
-    scripts: ['http://code.jquery.com/jquery-1.5.min.js']
-  }, function (err, window) {
-    var $ = window.jQuery;
-    console.log($);
-  });
-*/
-
-
-
-
-
-
-
-
-
-
-
-
   request (
     { method: 'GET',
       uri: urlstring }, 
@@ -228,11 +260,12 @@ app.post ('/url', function (req, res) {
         return;
       }
       //console.log(body);
-      
+
       // load html
       $ = cheerio.load(body);
       $('a').each(function(index) {
         results[index] = $(this).attr('href')
+        // DON'T USE THIS: results[index] = $(this).getAttribute('href')
         console.log ("links = "+results[index]);
       });
 
@@ -242,51 +275,224 @@ app.post ('/url', function (req, res) {
       
       // check if empty
       // TODO: test with empty HTML
-      
-      // cleanup url
-      //console.log(results);
-      
       var jsonArray = JSON.parse(JSON.stringify(results))
-      /*
-       console.log(uri);
-      var parsedUrl = url.parse(uri, true, true);
-      console.log ('Protocol is: ', parsedUrl.protocol);
-      console.log ('hostname is: ', parsedUrl.hostname);
-      console.log ('port is: ', parsedUrl.port); 
-	*/
       
       var cleanUrlList = {};	
       var z = 0;
       var newURL;
       for (var x in jsonArray) {
-        //console.log(jsonArray[x].charAt(0));
-        
-	// -----------------------------
+        // -----------------------------
         // Check for urls start with "/"
         // -----------------------------
-	if ((jsonArray[x].charAt(0) == "/") ||
-            (jsonArray[x].charAt(0) == "#") ||
-            (jsonArray[x].charAt(0) == "?")) 
+        if ((jsonArray[x].charAt(0) == "/") ||
+                  (jsonArray[x].charAt(0) == "#") ||
+                  (jsonArray[x].charAt(0) == "?")) 
         {
-	  //console.log(jsonArray[x]);
- 	  newURL = "http:???" + jsonArray[x];
-	  console.log(newURL);
-          jsonArray[x] = newURL
-	} else {
-	  cleanUrlList[z] = jsonArray[x];
-	  z++;
+          //console.log(jsonArray[x]);
+          newURL = "http:???" + jsonArray[x];
+          console.log(newURL);
+                jsonArray[x] = newURL
+        } else {
+          cleanUrlList[z] = jsonArray[x];
+          z++;
         }
       }
-      //console.log ("cleanUrlList: "+cleanUrlList);
-      //console.log ("stringify cleanUrlList: "+JSON.stringify(cleanUrlList));
-      //res.send(jsonArray);
-      res.send (cleanUrlList);
+      res.send (cleanUrlList);      
+      // TODO: send a 404, it wasn't a bad request and there is no website behind it.
+      // TODO: 204 - we got to a website and there was no link on it...
+      
   });
 });
 
 
 
-// get html from a url and scrape it
+// -----------------------------------
+// NEVER WORKED!!!: URL3 route using node-Phantom and PhantomJS
+// -----------------------------------
+app.post ('/url3', function (req, res) {
+  var urlstring = req.body.urlstring;
+  var results = {}; // don't use new Array() to initialize
+  
+  // get protocol, hostname, port
+  console.log("######## req.headers ########");
+  console.log(req.headers);
+  console.log ("####### req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+  
+  nodePhantom.create(function(err,ph) {
+    return ph.createPage(function(err,page) {
+      return page.open(urlstring, function(err,status) {
+        console.log("opened site? ", status);
+        page.includeJs('http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js', function(err) {
+        //jQuery Loaded.
+        //Wait for a bit for AJAX content to load on the page. Here, we are waiting 5 seconds.
+        setTimeout(function() {
+          return page.evaluate(function() {
+            //Get what you want from the page using jQuery. A good way is to populate an object with all the jQuery commands that you need and then return the object.
+              var h2Arr = [],
+              pArr = [];
+              $('h2').each(function() {
+                h2Arr.push($(this).html());
+              });
+              $('p').each(function() {
+                pArr.push($(this).html());
+              });
+
+              return {
+                h2: h2Arr,
+                p: pArr
+              };
+            }, function(err,result) {
+              console.log(result);
+              ph.exit();
+            });
+          }, 5000);
+        });
+	    });
+    });
+  });
+    
+});  // end of route /url3
+
+
+// -----------------------------------
+// NEVER WORKED!!!: URL2 route using Phantom and PhantomJS
+// -----------------------------------
+app.post ('/url2', function (req, res) {
+  var urlstring = req.body.urlstring;
+  var results = {}; // don't use new Array() to initialize
+  
+  // get protocol, hostname, port
+  console.log("######## req.headers ########");
+  console.log(req.headers);
+  console.log ("####### req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+
+  if (0) { // set 1 for synch version, 0 for asynch version
+    //this is the synchronous version  
+    // --------
+    // using example code from:
+    // https://ourcodeworld.com/articles/read/379/how-to-use-phantomjs-with-node-js
+    // --------
+    var _ph, _page, _outObj;
+    phantom.create().then (function(ph) {
+      _ph = ph;
+      return _ph.createPage();
+ 
+    }).then(function(page){
+      _page = page;
+      return _page.open(urlstring);
+    
+    }).then(function(status){
+      console.log(status);
+      return _page.property('content')
+ 
+    }).then(function(content){
+      console.log(content);
+      _page.close();
+      _ph.exit();
+    
+    }).catch(function(e){
+      console.log(e); 
+    });
+  
+  } else {
+  
+    // do the asynch version here
+    // -------------
+    // Asynch version for node.js 7+
+    // to be used for debugging:
+    // this prints out the html on the web page from urlstring
+    // -------------
+
+    console.log ("**** Inside /URL2 executing asynch branch");
+    (async function() {
+      const instance = await phantom.create();
+      const page = await instance.createPage();
+      
+      // this works for debugging if page is loading.
+      //await page.on('onResourceRequested', function(requestData) {
+      //  console.info('Requesting!!', requestData.url);
+      //});
+
+      const status = await page.open(urlstring);
+      
+      const content = await page.property('content');
+      //console.log(content);
+
+
+      // document properties and methods
+      //  https://www.w3schools.com/jsref/dom_obj_document.asp
+      
+      var title = await page.evaluate(function() {
+        return document.title;
+      });
+      console.log("**** TITLE = "+title);
+
+      var pageURL = await page.evaluate(function() {
+        return document.URL;
+      });
+      console.log("**** pageURL = "+pageURL);
+
+/*    var hrefarray = await page.evaluate(function() {
+        return document.getElementsByTagName("a");
+      });
+      console.log("**** hrefarray = "+hrefarray[0]);
+*/
+
+      var numlinks = await page.evaluate(function() {
+        return document.links.length;
+      });
+      console.log("**** numlinks = "+numlinks);
+
+      var alllinks = await page.evaluate(function() {
+        return document.links;
+      });
+      
+      console.log("**** alllinks[0] = "+alllinks[0].href); // works!!
+      //console.log("**** alllinks = "+alllinks[1].href); // NOT work!!
+      //for (var i = 0; i<alllinks.length; i++) {
+      //  console.log("i = "+alllinks[i]);
+      //}
+
+      var hrefone = await page.evaluate(function() {
+        return document.querySelector('a');
+      });
+      console.log("**** hrefone = "+hrefone.href); // works!!
+
+      var hrefmany = await page.evaluate(function() {
+        return document.querySelectorAll('a[href*="http"]');
+      });
+      console.log("**** hrefmany = "+hrefmany);
+      //console.log("**** hrefmany = "+JSON.stringify(hrefmany));
+      for (var i = 0; i<hrefmany.length; i++) {
+        console.log(i+" = "+hrefmany[i]);
+      }
+
+      await instance.exit();
+    })();
+      
+  
+  }
+
+});  // end of route /url2
+
+
+// -------------------------  
+// DOES NOT WORK!!!: get html from a url and scrape it
+// -------------------------  
 app.get ('/url', function (req, res) {
   var urlstring = "https://www.google.com/"
   var results = new Array();
