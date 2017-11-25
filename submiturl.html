@@ -8,7 +8,7 @@
         $('#resulthere').append("<p>Answer will appear here</p>");
         $("#submit").click(function(){
           urlstring=$("#urlstring").val();
-          $.post("http://ec2-54-148-189-221.us-west-2.compute.amazonaws.com:3001/url",
+          $.post("http://ec2-54-148-189-221.us-west-2.compute.amazonaws.com:3001/url-horseman",
 	    {urlstring: urlstring}, 
             function(data){
 	      //$('#resulthere').append("test!");
@@ -30,7 +30,7 @@
         $("#submit2").click(function(){
           urlstring=$("#urlstring").val();
           
-          //$.post("http://ec2-54-148-189-221.us-west-2.compute.amazonaws.com:3001/url",
+          //$.post("http://ec2-54-148-189-221.us-west-2.compute.amazonaws.com:3001/url-horseman",
           $.post("http://localhost3001/url2",
 	        {urlstring: urlstring}, 
           function(data){

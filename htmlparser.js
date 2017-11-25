@@ -143,6 +143,17 @@ app.post ('/url-horseman', function (req, res) {
   horseman
     .log("starting horseman")
     .open(urlstring)
+    .then ( function(success) {
+	      console.log ("--- open success ---");
+              console.log (success);
+            }, 
+            function (error) {
+              console.log ("--- open error ---");
+              console.log (error);
+	      res.status(400).send("Bad Request");
+	      //horseman.close();
+            }
+    )
     .log("### URL ### ").url().log()
     .log("### title ### ").title().log()
     //.log("### PLAIN TEXT ### ").plainText().log()
