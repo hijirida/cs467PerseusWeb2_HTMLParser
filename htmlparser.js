@@ -164,10 +164,10 @@ app.post ('/title', function (req, res) {
   var results = {};
   
   // get protocol, hostname, port
-  console.log("######## req.headers ########");
-  console.log(req.headers);
-  console.log ("####### req.body #######");
-  console.log(req.body);
+  //console.log("######## req.headers ########");
+  //console.log(req.headers);
+  //console.log ("####### req.body #######");
+  //console.log(req.body);
   
   // check for empty urlstring
   if (urlstring == "") {
@@ -180,7 +180,7 @@ app.post ('/title', function (req, res) {
     .open(urlstring)
     .then ( function(success) {
 	      console.log ("--- open success ---");
-              console.log (success);
+              //console.log (success);
             }, 
             function (error) {
               console.log ("--- open error ---");
@@ -191,7 +191,7 @@ app.post ('/title', function (req, res) {
     )
     .log("### URL ### ").url().log()
     .log("### title ### ").title().log()
-    .log("### anchor elements ## ").count('a').log() // outputs the number of anchor tags
+    //.log("### anchor elements ## ").count('a').log() // outputs the number of anchor tags
     .evaluate( function(){
       // Code is executed inside browser. no access to anything unless you pass in. 
       // Have access to jQuery, via $, automatically.
@@ -214,7 +214,7 @@ app.post ('/title', function (req, res) {
         var count = Object.keys(response).length
 
         if (response) {
-          console.log(response);
+          //console.log(response);
           console.log("### count ### " + count);
            
           if (response == "no_title") {
@@ -253,10 +253,10 @@ app.post ('/keyword', function (req, res) {
   var results = "undefined";
   
   // get protocol, hostname, port
-  console.log("/keyword req.headers ########");
-  console.log(req.headers);
-  console.log ("/keyword req.body #######");
-  console.log(req.body);
+  //console.log("/keyword req.headers ########");
+  //console.log(req.headers);
+  //console.log ("/keyword req.body #######");
+  //console.log(req.body);
   
   // check for empty urlstring
   if (urlstring == "") {
@@ -269,7 +269,7 @@ app.post ('/keyword', function (req, res) {
     .open(urlstring)
     .then ( function(success) {
 	      console.log ("--- open success ---");
-        console.log (success);
+        //console.log (success);
       }, 
       function (error) {
         console.log ("--- open error ---");
