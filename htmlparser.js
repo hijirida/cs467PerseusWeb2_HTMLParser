@@ -35,7 +35,7 @@ var Horseman = require('node-horseman');
 
 
 
-
+/*
 function parsehtml(textin, res) {
   console.log ("starting parsehtml");
   var n = 0
@@ -54,39 +54,98 @@ function parsehtml(textin, res) {
   res.type('text/plain');
   res.send(textin);
 }
+*/
 
-//
-// http://coursesweb.net/javascript/url-data-domain-name-path-file-search-hash_cs
-//
-function urlData(url){ // From: http://coursesweb.net/javascript/
-  // object that will be returned
-  var re = {protocol:'', domain:'', port:80, path:'', file:'', search_str:'', search_obj:{}, hash:''};
 
-  // creates an anchor element, and adds the url in "href" attribute
-  var a_elm  = document.createElement('a');
-  a_elm.href = url;
-
-  // adds URL data in re object, and returns it
-  re.protocol = a_elm.protocol.replace(':', '');
-  re.domain = a_elm.hostname.replace('www.', '');
-  if(a_elm.port !='') re.port = a_elm.port;
-  re.path = a_elm.pathname;
-  if(a_elm.pathname.match(/[^\/]+[\.][a-z0-9]+$/i) != null) re.file = a_elm.pathname.match(/[^\/]+[\.][a-z0-9]+$/i)[0];
-  re.search_str = a_elm.search.replace('?', '');
-
-  //get search-data into an object {name:value}, in case there are multiple pairs name=value
-  var src_data = re.search_str.split('&');
-  for(var i=0; i<src_data.length; i++){
-    var ar_val = src_data[i].split('=');   //separate name and value from each pair
-    re.search_obj[ar_val[0]] = ar_val[1];
+// ******************
+// 11/24/2017 Get title function
+// ******************
+/*
+function getTitle(url){ 
+  var horseman = new Horseman({timeout: 5000});
+  var urlstring = url;
+  var finalResults = {};
+  var finalStatus = "OK";
+  
+  // get protocol, hostname, port
+  console.log("&&&& inside getTitle &&&&");
+  console.log("&&&& urlstring: ", urlstring);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    return "Bad Request";
   }
+  
+  horseman
+    .log("&&& starting horseman &&&")
+    .open(urlstring)
+    .then ( function(success) {
+	      console.log ("&&& open success &&&");
+              console.log (success);
+            }, 
+            function (error) {
+              console.log ("&&&open error &&&");
+              console.log (error);
+              finalStatus = "Bad Request";
+            }
+    )
+    .log("&&& URL: ").url().log()
+    .log("&&& title: ").title().log()
+    .evaluate( function(){
+      // Code is executed inside the browser. no access to anything unless you pass in. 
+      // Have access to jQuery, via $, automatically.
+      
+      var current_title = $(document).attr('title');
+      var current_url = document.URL;
+      
+      if ( !current_title ) {
+        var results = "no_title";
+        return results;
+      }
+      var results = {};
+      results = {"url": current_url, "title" : current_title}; 
+      return results;
+    }) // passing in the argument to test if global variable works
+    .then(
+      function(response) {
+        
+        //var finalStatus = {}; // redundant??
+        console.log("&&& success step &&&");
+        var count = Object.keys(response).length
 
-  re.hash = a_elm.hash.replace('#', '');  //get #hash part
-  return re;
+        if (response) {
+          console.log(response);
+          console.log("&&& count &&& " + count);
+           
+          if (response == "no_title") {
+            finalStatus = "404 Not Found";
+          } else if (count == 0) {
+            finalStatus = "204 No urls found in html";
+          } else {
+            //return response;
+            finalResults = response;
+            console.log ("&&& finalResults: ", finalResults);
+            return finalResults;
+          }
+        } else {
+          console.log("empty response");
+          finalStatus = "404 Not Found";
+        }
+      },
+      function(error) {
+        console.log ("--- error handling ---");
+        console.log(error);
+        finalStatus = "404 Not Found";
+      }
+    )
+    .finally(function(){
+		  horseman.close();
+		  console.log ("&&& second finalSatus = ", finalStatus);
+	    console.log ("&&& second finalResults = ", finalResults);
+	    return finalResults;
+	  });
 }
-
-
-
+*/
 
 
 
@@ -94,27 +153,281 @@ function urlData(url){ // From: http://coursesweb.net/javascript/
 // ******** ROUTES *******************
 // ***********************************
 
-// ----------------------------------
-// user interface to test parser
-// ----------------------------------
-app.get ('/', function (req, res) {
-  var htmlin = "submiturl.html";
-  // fs.readFile Asynch reads file
-  console.log("starting to read");
- 
-  fs.readFile(htmlin, {enoding: 'utf8'}, function (err, data) {
-    if (err) { //throw err;
-      console.log("error readFileSync");
-      throw err;
-      return;
-    }
-    console.log(data);
-    screenout = data;
-    
-    res.type('html');
-    res.send(screenout);
-  });
+
+// -----------------------------------
+// post title route
+// 2017-11-24 returns title of a URL
+// -----------------------------------
+app.post ('/title', function (req, res) {
+  var horseman = new Horseman({timeout: 10000});
+  var urlstring = req.body.urlstring;
+  var results = {};
+  
+  // get protocol, hostname, port
+  console.log("######## req.headers ########");
+  console.log(req.headers);
+  console.log ("####### req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+
+  horseman
+    .log("starting horseman")
+    .open(urlstring)
+    .then ( function(success) {
+	      console.log ("--- open success ---");
+              console.log (success);
+            }, 
+            function (error) {
+              console.log ("--- open error ---");
+              console.log (error);
+	      res.status(400).send("Bad Request");
+	      //horseman.close();
+            }
+    )
+    .log("### URL ### ").url().log()
+    .log("### title ### ").title().log()
+    .log("### anchor elements ## ").count('a').log() // outputs the number of anchor tags
+    .evaluate( function(){
+      // Code is executed inside browser. no access to anything unless you pass in. 
+      // Have access to jQuery, via $, automatically.
+      
+      var current_title = $(document).attr('title');
+      var current_url = document.URL;
+      
+      if ( !current_title ) {
+        var results = "no_title";
+        return results;
+      }
+
+      var results = {};
+      results = {"urlstring": current_url, "title" : current_title};  
+      return results;
+    })
+    .then(
+      function(response) {
+        console.log("--- success step ---");
+        var count = Object.keys(response).length
+
+        if (response) {
+          console.log(response);
+          console.log("### count ### " + count);
+           
+          if (response == "no_title") {
+            res.status(404).send("404 Not Found");
+          } else if (count == 0) {
+            res.status(204).send("204 No urls found in html");
+          } else {
+            res.send(response);
+          }
+        } else {
+          console.log("empty response");
+          res.status(404).send("404 Not Found");
+        }
+      },
+      function(error) {
+        console.log ("--- error handling ---");
+        console.log(error);
+        res.status(404).send("404 Not Found");
+      }
+    )
+    .finally(function(){
+		  horseman.close();
+	  });    
 });
+
+
+
+// -----------------------------------
+// post keyword route
+// 2017-11-24 returns yes or no if keyword exists or not
+// -----------------------------------
+app.post ('/keyword', function (req, res) {
+  var horseman = new Horseman({timeout: 10000});
+  var urlstring = req.body.urlstring;
+  var keyword = req.body.keyword;
+  var results = "undefined";
+  
+  // get protocol, hostname, port
+  console.log("/keyword req.headers ########");
+  console.log(req.headers);
+  console.log ("/keyword req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+
+  horseman
+    .log("starting horseman")
+    .open(urlstring)
+    .then ( function(success) {
+	      console.log ("--- open success ---");
+        console.log (success);
+      }, 
+      function (error) {
+        console.log ("--- open error ---");
+        console.log (error);
+	      res.status(400).send("Bad Request");
+	      //horseman.close();
+      }
+    )
+    .log("/keyword URL %%% ").url().log()
+    .log("/keyword title %%% ").title().log()
+    .plainText()
+    . then ( function (someText) {
+      //console.log ("%%%% function after plaintext(), aword = ", aword);
+      //console.log (someText);
+      console.log ("%%%% searching for keyword = ", keyword);
+      var n = someText.indexOf(keyword);
+      console.log ("%%%% n = ", n);
+      var result = { "n": n.toString(), "urlstring": urlstring };
+      res.send(result);
+      
+    }, function (error) {
+        console.log ("--- page open error ---");
+        console.log (error);
+	      res.status(400).send("Bad Request");
+    })
+    .finally(function(){
+		  horseman.close();
+	  });    
+});
+
+
+// -----------------------------------
+// UNDER DEVELOPMENT!!! post URL route
+// 2017-11-24 URL route using horseman to access phantomjs
+// -----------------------------------
+app.post ('/url-horsemanplus', function (req, res) {
+  var horseman = new Horseman({timeout: 10000});
+  var urlstring = req.body.urlstring;
+  var keyword = req.body.keyword;
+  var results = {};
+  
+  // get protocol, hostname, port
+  console.log("######## req.headers ########");
+  console.log(req.headers);
+  console.log ("####### req.body #######");
+  console.log(req.body);
+  
+  // check for empty urlstring
+  if (urlstring == "") {
+    res.status(400).send("Bad Request");
+    return;
+  }
+  
+  horseman
+    .log("starting horseman")
+    .open(urlstring)
+    .then ( function(success) {
+	      console.log ("--- open success ---");
+              console.log (success);
+            }, 
+            function (error) {
+              console.log ("--- open error ---");
+              console.log (error);
+	      res.status(400).send("Bad Request");
+	      //horseman.close();
+            }
+    )
+    .log("### URL ### ").url().log()
+    .log("### title ### ").title().log()
+    //.log("### PLAIN TEXT ### ").plainText().log()
+    //.html().log() // log prints the last call
+    .log("### anchor elements ## ").count('a').log() // outputs the number of anchor tags
+    .evaluate( function(){
+      // This code is executed inside the browser.
+      // It's sandboxed from Node, and has no access to anything
+      // unless you pass it in. Have access to jQuery, via $, automatically.
+      
+      var current_title = $(document).attr('title');
+      var current_url = document.URL;
+      
+      if ( !current_title ) {
+        var results = "no_title";
+        return results;
+      }
+
+      //var links = [];
+      var results = {};
+
+      $('a').each( function(index) {
+        //DO NOT USE!: var link = $(this).attr('href');
+        var link = this.getAttribute('href');
+        //links.push(link);
+        if ((current_url) && (link)) {
+          if (link.charAt(0) == "/") {
+            link = current_url.concat(link.substring(1));
+          }
+        }
+        results[index] = link;
+        });
+      
+      
+      var cleanUrlList = {};	
+      var z = 0;
+      var newURL;
+      for (var x in results) {
+        if ((results[x]) && (results[x].substring(0, 4) == 'http'))
+        {
+          cleanUrlList[z] = results[x];
+          //cleanUrlList[z] = {"url": results[x], "title": 
+          z++;
+        }
+      }
+      return cleanUrlList; //results;  
+    })
+    .then(
+      function(response) {
+
+        console.log("--- success step ---");
+        var count = Object.keys(response).length
+
+        if (response) {
+          console.log(response);
+          console.log("### count ### " + count);
+           
+          if (response == "no_title") {
+            res.status(404).send("404 Not Found");
+            
+          } else if (count == 0) {
+            res.status(204).send("204 No urls found in html");
+          
+          } else {
+            
+            var title = getTitle("http://google.com");
+            console.log ("getTitle = ", title);
+
+            res.send(response);
+          }
+
+        } else {
+          console.log("empty response");
+          res.status(404).send("404 Not Found");
+        }
+      },
+      function(error) {
+        console.log ("--- error handling ---");
+        console.log(error);
+        res.status(404).send("404 Not Found");
+      }
+    )
+    .finally(function(){
+		  horseman.close();
+	  });    
+});
+
+
+
+
+
 
 
 // -----------------------------------
@@ -241,6 +554,29 @@ app.post ('/url-horseman', function (req, res) {
 
 
 
+
+
+// ----------------------------------
+// DEPRECATED!  user interface to test parser
+// ----------------------------------
+app.get ('/', function (req, res) {
+  var htmlin = "submiturl.html";
+  // fs.readFile Asynch reads file
+  console.log("starting to read");
+ 
+  fs.readFile(htmlin, {enoding: 'utf8'}, function (err, data) {
+    if (err) { //throw err;
+      console.log("error readFileSync");
+      throw err;
+      return;
+    }
+    console.log(data);
+    screenout = data;
+    
+    res.type('html');
+    res.send(screenout);
+  });
+});
 
 // -----------------------------------
 // DEPRECATED!!!: post URL route using cheerio
